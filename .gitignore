@@ -22,4 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Environment and secrets - NEVER commit these
 .env
+.env.*
+.env.local
+.env.development
+.env.production
+*.pem
+*.key
+*credentials*.json
+*secret*
+firebase-adminsdk*.json
+serviceAccount*.json
