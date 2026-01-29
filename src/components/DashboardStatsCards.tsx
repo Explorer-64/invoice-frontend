@@ -7,13 +7,17 @@ import type { DashboardStats } from "types";
 interface Props {
   stats: DashboardStats | null;
   loading: boolean;
+  rangeLabel: string;
+  /** Fallback invoice count from Firestore when API fails (stats is null) */
+  invoicesFallback?: number;
 }
 
-export function DashboardStatsCards({ stats, loading }: Props) {
+export function DashboardStatsCards({ stats, loading, rangeLabel, invoicesFallback = 0 }: Props) {
+  const invoiceCount = stats ? stats.invoices_count : invoicesFallback;
   const formattedStats = {
     hours: stats ? `${stats.hours_this_week.toFixed(1)}h` : "0h",
     earnings: stats ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(stats.earnings) : "$0",
-    invoices: stats ? stats.invoices_count.toString() : "0",
+    invoices: invoiceCount.toString(),
   };
 
   const renderStatValue = (value: string) => {
@@ -26,7 +30,7 @@ export function DashboardStatsCards({ stats, loading }: Props) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
       {[
-        { icon: Clock, label: "This Week", value: formattedStats.hours },
+        { icon: Clock, label: rangeLabel, value: formattedStats.hours },
         { icon: DollarSign, label: "Earnings", value: formattedStats.earnings },
         { icon: FileText, label: "Invoices", value: formattedStats.invoices },
       ].map((item, i) => (

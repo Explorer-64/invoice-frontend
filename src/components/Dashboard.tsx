@@ -28,6 +28,14 @@ import { GPSTrackingCard } from "components/GPSTrackingCard";
 import { dbPromise } from "utils/db";
 import { CreateInvoiceDialog } from "components/CreateInvoiceDialog";
 import { ClientResponse } from "types";
+import { useInvoicesStore } from "utils/useInvoicesStore";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -50,12 +58,60 @@ export function Dashboard() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const { user, loading } = useCurrentUser();
+  const { invoices, subscribe } = useInvoicesStore();
+
+  type StatsRange = "week" | "month" | "year" | string;
+  const [statsRange, setStatsRange] = useState<StatsRange>("week");
+
+  // Previous years for date range (current year - 1 down to 10 years back)
+  const currentYear = new Date().getFullYear();
+  const previousYears = Array.from({ length: 10 }, (_, i) => (currentYear - 1 - i).toString());
+
+  const getRangeLabel = (range: StatsRange): string => {
+    if (range === "week") return "This Week";
+    if (range === "month") return "This Month";
+    if (range === "year") return "This Year";
+    if (/^\d{4}$/.test(range)) return range;
+    return String(range);
+  };
+
+  const buildStatsQuery = (range: StatsRange) => {
+    if (/^\d{4}$/.test(range)) {
+      return { range: "year" as const, year: parseInt(range, 10) };
+    }
+    return { range };
+  };
+
+  const loadStats = async (range: StatsRange) => {
+    setStatsLoading(true);
+    setStatsError(null);
+    try {
+      const query = buildStatsQuery(range);
+      const res = await brain.get_dashboard_stats({ query });
+      if (!res.ok) {
+        throw new Error(`Failed to load stats (${res.status})`);
+      }
+      const data = await res.json();
+      setStats(data);
+    } catch (err) {
+      console.error("Failed to load stats", err);
+      setStatsError("Failed to load stats");
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!loading && !user) {
       navigate("/");
     }
   }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = subscribe(user.uid);
+    return unsubscribe;
+  }, [user?.uid, subscribe]);
 
   useEffect(() => {
     if (!user) return;
@@ -91,21 +147,8 @@ export function Dashboard() {
     };
     loadClients();
 
-    // Fetch stats
-    const fetchStats = async () => {
-      setStatsLoading(true);
-      try {
-        const res = await brain.get_dashboard_stats();
-        const data = await res.json();
-        setStats(data);
-      } catch (err) {
-        setStatsError("Failed to load stats");
-        console.error(err);
-      } finally {
-        setStatsLoading(false);
-      }
-    };
-    fetchStats();
+    // Fetch stats (initially for this week)
+    loadStats("week");
 
     // Fetch recent sessions
     const fetchRecentSessions = async () => {
@@ -142,7 +185,7 @@ export function Dashboard() {
       setRecentSessions(prev => prev.filter(s => s.id !== sessionToDelete.id));
       
       // Update stats if needed (optional)
-      const res = await brain.get_dashboard_stats();
+      const res = await brain.get_dashboard_stats({ query: buildStatsQuery(statsRange) });
       const data = await res.json();
       setStats(data);
 
@@ -267,13 +310,43 @@ export function Dashboard() {
         )}
 
         {/* Quick Stats */}
-        <DashboardStatsCards stats={stats} loading={statsLoading} />
+        <div className="flex items-center justify-between mb-2 mt-4">
+          <h2 className="text-sm font-semibold text-muted-foreground">
+            <Translate>Time Range</Translate>
+          </h2>
+          <Select
+            value={statsRange}
+            onValueChange={(val) => {
+              const v = val as StatsRange;
+              setStatsRange(v);
+              loadStats(v);
+            }}
+          >
+            <SelectTrigger className="w-40 h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="week">This Week</SelectItem>
+              <SelectItem value="month">This Month</SelectItem>
+              <SelectItem value="year">This Year</SelectItem>
+              {previousYears.map((y) => (
+                <SelectItem key={y} value={y}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <DashboardStatsCards
+          stats={stats}
+          loading={statsLoading}
+          rangeLabel={getRangeLabel(statsRange)}
+          invoicesFallback={invoices.length}
+        />
 
         {/* Tasks Widget */}
         <TaskList />
 
         {/* Recent Invoices */}
-        <RecentInvoicesList stats={stats} loading={statsLoading} error={statsError} />
+        <RecentInvoicesList stats={stats} loading={statsLoading} error={statsError} invoicesFallback={invoices} />
 
         {/* Recent Sessions */}
         <RecentSessionsList 
@@ -315,7 +388,7 @@ export function Dashboard() {
             onSuccess={() => {
                 toast.success("Invoice created");
                 // Refresh stats
-                brain.get_dashboard_stats().then(res => res.json()).then(data => setStats(data));
+                brain.get_dashboard_stats({ query: buildStatsQuery(statsRange) }).then(res => res.json()).then(data => setStats(data));
             }}
         />
       </div>

@@ -2,16 +2,28 @@ import React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { Translate } from "components/Translate";
-import type { DashboardStats, DashboardInvoice } from "types";
+import type { DashboardStats, DashboardInvoice, InvoiceListItem } from "types";
 
 interface Props {
   stats: DashboardStats | null;
   loading: boolean;
   error: string | null;
+  /** Fallback from Firestore (same source as Invoices page) when API returns empty */
+  invoicesFallback?: InvoiceListItem[];
 }
 
-export function RecentInvoicesList({ stats, loading, error }: Props) {
+export function RecentInvoicesList({ stats, loading, error, invoicesFallback = [] }: Props) {
   const navigate = useNavigate();
+  const recentInvoices = stats
+    ? (stats.recent_invoices ?? [])
+    : invoicesFallback.slice(0, 5).map((inv): DashboardInvoice => ({
+        id: inv.id,
+        invoice_number: inv.invoice_number,
+        client_name: inv.client_name,
+        total: inv.total,
+        status: inv.status,
+        date: typeof inv.invoice_date === "string" ? inv.invoice_date : inv.invoice_date?.toISOString?.()?.slice(0, 10) ?? "",
+      }));
 
   const renderContent = () => {
     if (loading && !stats) {
@@ -43,7 +55,7 @@ export function RecentInvoicesList({ stats, loading, error }: Props) {
       );
     }
 
-    if (!stats?.recent_invoices || stats.recent_invoices.length === 0) {
+    if (!recentInvoices || recentInvoices.length === 0) {
       return (
         <div className="bg-card border border-border rounded-xl p-4 text-sm text-muted-foreground">
           <Translate>No invoices yet. Create one from the Quick Actions below.</Translate>
@@ -53,7 +65,7 @@ export function RecentInvoicesList({ stats, loading, error }: Props) {
 
     return (
       <div className="space-y-2">
-        {stats.recent_invoices.map((invoice: DashboardInvoice) => (
+        {recentInvoices.map((invoice: DashboardInvoice) => (
           <div 
             key={invoice.id} 
             className="bg-card border border-border rounded-xl p-4 hover:shadow-sm transition-shadow cursor-pointer"

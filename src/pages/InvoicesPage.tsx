@@ -113,6 +113,30 @@ const InvoicesPage = () => {
     }
   };
 
+  const handlePreviewInvoice = async (invoiceId: string) => {
+    try {
+      const url = `/routes/invoices/${invoiceId}/pdf`;
+      const authHeader = await auth.getAuthHeaderValue();
+      const response = await fetch(url, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          Authorization: authHeader,
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to load PDF (${response.status})`);
+      }
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      // Open PDF in new tab for preview
+      window.open(objectUrl, "_blank");
+    } catch (error) {
+      console.error("Failed to preview invoice:", error);
+      toast.error("Failed to preview invoice");
+    }
+  };
+
   const handleShareInvoice = async (invoice: Invoice) => {
     try {
       const url = `/routes/invoices/${invoice.id}/share`;
@@ -308,6 +332,7 @@ const InvoicesPage = () => {
           onDelete={(inv) => handleRequestDeleteInvoice(inv as unknown as InvoiceListItem)}
           onShare={handleShareInvoice}
           onDownload={handleDownloadInvoicePdf}
+          onPreview={handlePreviewInvoice}
         />
 
         <DeleteInvoiceDialog

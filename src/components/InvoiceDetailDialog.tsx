@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Share2, Download, Trash2, Pencil, Check, X } from "lucide-react";
+import { Share2, Download, Trash2, Pencil, Check, X, Eye } from "lucide-react";
 import type { Invoice, ClientResponse, BusinessProfile } from "types";
 import { useEffect, useState } from "react";
 import brain from "brain";
@@ -27,18 +27,20 @@ interface Props {
   onDelete: (invoice: Invoice) => void;
   onShare?: (invoice: Invoice) => void;
   onDownload?: (invoiceId: string, invoiceNumber: string) => void;
+  onPreview?: (invoiceId: string) => void;
   onUpdate?: () => void
 }
 
-export function InvoiceDetailDialog({ 
-  open, 
-  onOpenChange, 
-  invoice, 
-  loading = false, 
+export function InvoiceDetailDialog({
+  open,
+  onOpenChange,
+  invoice,
+  loading = false,
   clients = [],
-  onDelete, 
-  onShare, 
+  onDelete,
+  onShare,
   onDownload,
+  onPreview,
   onUpdate
 }: Props) {
   const { user } = useUserGuardContext();
@@ -418,7 +420,15 @@ export function InvoiceDetailDialog({
               )}
               
               {/* Actions */}
-              <div className="flex gap-2 pt-4 border-t">
+              <div className="flex flex-wrap gap-2 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => onPreview?.(String(invoice.id))}
+                  className="flex-1"
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  Preview
+                </Button>
                 <Button
                   onClick={() => onShare?.(invoice)}
                   className="flex-1"
@@ -431,7 +441,7 @@ export function InvoiceDetailDialog({
                   className="flex-1"
                 >
                   <Download className="mr-2 h-4 w-4" />
-                  Download PDF
+                  Download
                 </Button>
                 <Button
                   variant="destructive"
