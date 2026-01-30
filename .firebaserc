@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "stackapps-aeb90"
+  },
+  "targets": {
+    "stackapps-aeb90": {
+      "hosting": {
+        "invoicingwizard": [
+          "invoicingwizard"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

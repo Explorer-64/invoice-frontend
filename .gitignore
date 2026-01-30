@@ -34,3 +34,6 @@ dist-ssr
 *secret*
 firebase-adminsdk*.json
 serviceAccount*.json
+
+# Firebase
+.firebase/

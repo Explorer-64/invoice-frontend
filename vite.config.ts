@@ -32,7 +32,7 @@ const buildVariables = () => {
 		__APP_DEPLOY_APPNAME__: JSON.stringify(""),
 		__APP_DEPLOY_CUSTOM_DOMAIN__: JSON.stringify(""),
 		__STACK_AUTH_CONFIG__: "{}",
-		__FIREBASE_CONFIG__: authConfigRaw,
+		__FIREBASE_CONFIG__: JSON.stringify(authConfigRaw),
 	};
 
 	return defines;
